@@ -1,29 +1,11 @@
 import { ConfigEngine } from '../src/config-engine'
 import { ConfigEngineManager } from '../src/config-engine-manager'
-import { TestConfiguration, managerNatsClient, engineNatsClient, sleep } from './setup/test-utils'
+import { TestConfiguration, managerNatsClient, engineNatsClient, sleep, fullConfig, minimalConfig } from './setup/test-utils'
 import { describe, it, beforeEach, afterEach, expect, jest } from '@jest/globals'
 import { NatsConnection } from 'nats'
 
 describe('ConfigEngine', () => {
   const namespace = 'test-engine'
-  const fullConfig: TestConfiguration = {
-    requiredString: 'test',
-    requiredNumber: 42,
-    requiredBoolean: true,
-    optionalString: 'optional',
-    optionalNumber: 123,
-    optionalBoolean: false,
-    nested: {
-      nestedString: 'nested',
-      nestedOptionalNumber: 42,
-      nestedOptionalBoolean: true,
-      doubleNested: {
-        nestedOptionalString: 'double nested',
-        nestedNumber: 42,
-        nestedBoolean: true
-      }
-    }
-  }
 
   let managerClient: NatsConnection
   let engineClient: NatsConnection
@@ -55,30 +37,23 @@ describe('ConfigEngine', () => {
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
 
-      expect(engine.get('requiredString')).toBe('test')
-      expect(engine.get('requiredNumber')).toBe(42)
-      expect(engine.get('requiredBoolean')).toBe(true)
-      expect(engine.get('optionalString')).toBe('optional')
-      expect(engine.get('optionalNumber')).toBe(123)
-      expect(engine.get('optionalBoolean')).toBe(false)
+      expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
+      expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
+      expect(engine.get('requiredBoolean')).toBe(fullConfig.requiredBoolean)
+      expect(engine.get('optionalString')).toBe(fullConfig.optionalString)
+      expect(engine.get('optionalNumber')).toBe(fullConfig.optionalNumber)
+      expect(engine.get('optionalBoolean')).toBe(fullConfig.optionalBoolean)
+      expect(engine.get('nested.nestedString')).toBe(fullConfig.nested.nestedString)  
+      expect(engine.get('nested.nestedOptionalNumber')).toBe(fullConfig.nested.nestedOptionalNumber)
+      expect(engine.get('nested.nestedOptionalBoolean')).toBe(fullConfig.nested.nestedOptionalBoolean)
+      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
+      expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
+      expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
 
       engine.close()
     })
 
     it('should return undefined for unset optional values', async () => {
-      const minimalConfig: TestConfiguration = {
-        requiredString: 'test',
-        requiredNumber: 42,
-        requiredBoolean: true,
-        nested: {
-          nestedString: 'nested',
-          doubleNested: {
-            nestedNumber: 42,
-            nestedBoolean: true
-          }
-        }
-      }
-
       await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: { replicas: 1, history: 2 },
@@ -93,18 +68,19 @@ describe('ConfigEngine', () => {
         console.error(key)
       }
 
-      expect(engine.get('requiredString')).toBe('test')
-      expect(engine.get('requiredNumber')).toBe(42)
-      expect(engine.get('requiredBoolean')).toBe(true)
+      expect(engine.get('requiredString')).toBe(minimalConfig.requiredString)
+      expect(engine.get('requiredNumber')).toBe(minimalConfig.requiredNumber)
+      expect(engine.get('requiredBoolean')).toBe(minimalConfig.requiredBoolean)
+      expect(engine.get('nested.nestedString')).toBe(minimalConfig.nested.nestedString) 
+      expect(engine.get('nested.doubleNested.nestedNumber')).toBe(minimalConfig.nested.doubleNested.nestedNumber)
+      expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(minimalConfig.nested.doubleNested.nestedBoolean)
       expect(engine.get('optionalString')).toBe(undefined)
       expect(engine.get('optionalNumber')).toBe(undefined)
-      expect(engine.get('optionalBoolean')).toBe(undefined)
-      expect(engine.get('nested.nestedString')).toBe('nested')  
+      expect(engine.get('optionalBoolean')).toBe(undefined) 
       expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(undefined)
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(undefined)
-      expect(engine.get('nested.doubleNested.nestedNumber')).toBe(42)
-      expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(true)
+      
       engine.close()
     })
   })
@@ -129,7 +105,7 @@ describe('ConfigEngine', () => {
       expect(callback).toHaveBeenCalledTimes(1)
       expect(callback).toHaveBeenCalledWith(expect.objectContaining({
         key: namespace + '.optionalString',
-        oldValue: 'optional',
+        oldValue: fullConfig.optionalString,
         newValue: 'new value'
       }))
 
@@ -153,9 +129,9 @@ describe('ConfigEngine', () => {
       await sleep(250)
   
       expect(callback).toHaveBeenCalledTimes(1)
-      expect(callback).toHaveBeenCalledWith(expect.objectContaining({
+      expect(callback).toHaveBeenCalledWith(expect.objectContaining({ 
         key: namespace + '.optionalString',
-        oldValue: 'optional',
+        oldValue: fullConfig.optionalString,
         newValue: 'new value'
       }))
   

@@ -19,6 +19,38 @@ export interface TestConfiguration {
   }
 }
 
+export const fullConfig: TestConfiguration = {
+  requiredString: 'test',
+  requiredNumber: 42,
+  requiredBoolean: true,
+  optionalString: 'optional',
+  optionalNumber: 123,
+  optionalBoolean: false,
+  nested: {
+    nestedString: 'nested',
+    nestedOptionalNumber: 42,
+    nestedOptionalBoolean: true,
+    doubleNested: {
+      nestedOptionalString: 'double nested',
+      nestedNumber: 42,
+      nestedBoolean: true
+    }
+  }
+}
+
+export const minimalConfig: TestConfiguration = {
+  requiredString: 'min-test',
+  requiredNumber: 24,
+  requiredBoolean: false,
+  nested: {
+    nestedString: 'nested',
+    doubleNested: {
+      nestedNumber: 42,
+      nestedBoolean: true
+    }
+  }
+}
+
 export async function engineNatsClient(): Promise<NatsConnection> {
   return connect({ 
     servers: ['nats://localhost:4222'],

@@ -1,49 +1,22 @@
 import { ConfigEngineManager } from '../src/config-engine-manager'
 import { ConfigEngine } from '../src/config-engine'
-import { TestConfiguration, engineNatsClient, managerNatsClient } from './setup/test-utils'
-import { describe, it, beforeEach, expect } from '@jest/globals'
+import { TestConfiguration, engineNatsClient, managerNatsClient, fullConfig, minimalConfig } from './setup/test-utils'
+import { describe, it, beforeEach, expect, afterEach } from '@jest/globals'
 import { NatsConnection } from 'nats'
 import { RecursivePartial } from '../src/types'
 
 describe('ConfigEngineManager', () => {
   const namespace = 'test-manager'
-  const fullConfig: TestConfiguration = {
-    requiredString: 'test',
-    requiredNumber: 42,
-    requiredBoolean: true,
-    optionalString: 'optional',
-    optionalNumber: 123,
-    optionalBoolean: false,
-    nested: {
-      nestedString: 'nested',
-      nestedOptionalNumber: 42,
-      nestedOptionalBoolean: true,
-      doubleNested: {
-        nestedOptionalString: 'double nested',
-        nestedNumber: 42,
-        nestedBoolean: true
-      }
-    }
-  }
 
-  const minimalConfig: TestConfiguration = {
-    requiredString: 'min-test',
-    requiredNumber: 24,
-    requiredBoolean: false,
-    nested: {
-      nestedString: 'nested',
-      doubleNested: {
-        nestedNumber: 42,
-        nestedBoolean: true
-      }
-    }
-  }
+  let managerClient: NatsConnection
+  let engineClient: NatsConnection
 
-  let client: NatsConnection
   beforeEach(async () => {
-    client = await managerNatsClient()
+    managerClient = await managerNatsClient()
+    engineClient = await engineNatsClient()
+
     try {
-      const kv = await client.jetstream().views.kv(namespace)
+      const kv = await managerClient.jetstream().views.kv(namespace)
       await kv.destroy()
     } catch (error) {
       // Ignore errors if namespace doesn't exist
@@ -51,12 +24,13 @@ describe('ConfigEngineManager', () => {
   })
 
   afterEach(async () => {
-    await client.close()
+    await managerClient.close()
+    await engineClient.close()
   })
 
   describe('create', () => {
     it('should create a new namespace with default configuration values', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -65,7 +39,7 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       
       expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
@@ -79,10 +53,12 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
+
+      engine.close()
     })
 
     it('should create a new namespace with only required configuration values', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -91,7 +67,7 @@ describe('ConfigEngineManager', () => {
         defaults: minimalConfig
       })
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       expect(engine.get('requiredString')).toBe(minimalConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(minimalConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(minimalConfig.requiredBoolean)
@@ -104,10 +80,12 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(undefined)
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(undefined)
+
+      engine.close()
     })
 
     it('should overwrite existing namespace with new default configuration values', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -116,7 +94,7 @@ describe('ConfigEngineManager', () => {
         defaults: minimalConfig
       })
 
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -125,7 +103,7 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(fullConfig.requiredBoolean)
@@ -138,6 +116,8 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
+
+      engine.close()
     })
 
     it('should error when trying to create from readonly nats connection', async () => {
@@ -159,7 +139,7 @@ describe('ConfigEngineManager', () => {
 
   describe('patch', () => {
     it('should patch an existing namespace with new values', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -178,9 +158,9 @@ describe('ConfigEngineManager', () => {
           }
         }
       }
-      await ConfigEngineManager.patch(client, namespace, patch)
+      await ConfigEngineManager.patch(managerClient, namespace, patch)
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       expect(engine.get('requiredString')).toBe(minimalConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(minimalConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(minimalConfig.requiredBoolean)
@@ -191,11 +171,11 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('nested.nestedString')).toBe(patch.nested!.nestedString)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(patch.nested!.doubleNested!.nestedBoolean)
 
-      await client.close()
+      engine.close()
     })
 
     it('should remove keys when explicitly undefined in patch', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -211,9 +191,9 @@ describe('ConfigEngineManager', () => {
           nestedOptionalNumber: undefined,
         }
       }
-      await ConfigEngineManager.patch(client, namespace, patch)
+      await ConfigEngineManager.patch(managerClient, namespace, patch)
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(fullConfig.requiredBoolean)
@@ -226,16 +206,16 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('optionalNumber')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
 
-      await client.close()
+      engine.close()
     })
 
     it('should throw error when patching non-existent namespace', async () => {
-      await expect(ConfigEngineManager.patch(client, 'non-existent', {}))
+      await expect(ConfigEngineManager.patch(managerClient, 'non-existent', {}))
         .rejects.toThrow()
     })
 
     it('should error when trying to patch from readonly nats connection', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -244,20 +224,16 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const readonlyClient = await engineNatsClient()
-
-      await expect(ConfigEngineManager.patch(readonlyClient, namespace, {
+      await expect(ConfigEngineManager.patch(engineClient, namespace, {
         requiredString: 'test'
       }))    
         .rejects.toThrow()
-
-      await readonlyClient.close()
     })
   })
 
   describe('connect', () => {
     it('should allow setting values in an existing namespace', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -266,12 +242,12 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const engine = await ConfigEngine.connect<TestConfiguration>(client, namespace)
+      const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
       
       expect(engine.get('optionalString')).toEqual(fullConfig.optionalString)
       expect(engine.get('optionalNumber')).toEqual(fullConfig.optionalNumber)
       
-      const manager = await ConfigEngineManager.connect<TestConfiguration>(client, namespace)
+      const manager = await ConfigEngineManager.connect<TestConfiguration>(managerClient, namespace)
       
       const newStringVal = 'new string value'
       const newNumberVal = 789
@@ -280,10 +256,12 @@ describe('ConfigEngineManager', () => {
 
       expect(engine.get('optionalString')).toEqual(newStringVal)
       expect(engine.get('optionalNumber')).toEqual(newNumberVal)
+
+      engine.close()
     })
 
     it('should track history including deletes and undefined values', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -292,7 +270,7 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const manager = await ConfigEngineManager.connect<TestConfiguration>(client, namespace)
+      const manager = await ConfigEngineManager.connect<TestConfiguration>(managerClient, namespace)
       
       await manager.set('optionalString', 'first')
       await manager.set('optionalString', 'second')
@@ -329,7 +307,7 @@ describe('ConfigEngineManager', () => {
     })
 
     it('should destroy configuration namespace', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -338,21 +316,21 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const manager = await ConfigEngineManager.connect<TestConfiguration>(client, namespace)
+      const manager = await ConfigEngineManager.connect<TestConfiguration>(managerClient, namespace)
       
       await manager.destroy()
 
-      await expect(ConfigEngineManager.connect<TestConfiguration>(client, namespace))
+      await expect(ConfigEngineManager.connect<TestConfiguration>(managerClient, namespace))
         .rejects.toThrow()
     })
 
     it('should throw error when connecting to non-existent namespace', async () => {
-      await expect(ConfigEngineManager.connect<TestConfiguration>(client, 'non-existent'))
+      await expect(ConfigEngineManager.connect<TestConfiguration>(managerClient, 'non-existent'))
         .rejects.toThrow()
     })
 
     it('should error when trying to set from readonly nats connection', async () => {
-      await ConfigEngineManager.create(client, {
+      await ConfigEngineManager.create(managerClient, {
         namespace,
         kvOptions: {
           replicas: 1,
@@ -361,14 +339,10 @@ describe('ConfigEngineManager', () => {
         defaults: fullConfig
       })
 
-      const readonlyClient = await engineNatsClient()
-
-      const manager = await ConfigEngineManager.connect<TestConfiguration>(readonlyClient, namespace)
+      const manager = await ConfigEngineManager.connect<TestConfiguration>(engineClient, namespace)
       
       await expect(manager.set('optionalString', 'test'))    
         .rejects.toThrow()
-
-      await readonlyClient.close()
     })
   })
 })
