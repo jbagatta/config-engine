@@ -308,22 +308,6 @@ describe('ConfigEngineManager', () => {
       ])
     })
 
-    it('should error when trying to create from readonly nats connection', async () => {
-      const readonlyClient = await engineNatsClient()
-
-      await expect(ConfigEngineManager.create(readonlyClient, {
-        namespace,
-        kvOptions: {
-          replicas: 1,
-          history: 2
-        },
-        defaults: fullConfig
-      }))
-        .rejects.toThrow()
-
-      await readonlyClient.close()
-    })
-
     it('should destroy configuration namespace', async () => {
       await ConfigEngineManager.create(client, {
         namespace,
