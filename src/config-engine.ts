@@ -4,19 +4,22 @@ import {
   ConfigValue,
   ConfigChangeEvent,
   ConfigChangeCallback,
+  ConfigurationSchema,
+  PrimitiveValue,
+  ConfigKey,
 } from './types'
 import { namespacedKey, namespaceWatchFilter } from './util'
 
 const jsonCodec = JSONCodec()
  
 interface ConfigurationEntry {
-  value: ConfigValue
+  value: PrimitiveValue
   revision: number
 }
 
-export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements IConfigEngine<T> {
+export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEngine<T> {
   private config = new Map<string, ConfigurationEntry>()
-  private watchers = new Map<string, Set<ConfigChangeCallback<ConfigValue>>>()
+  private watchers = new Map<string, Set<ConfigChangeCallback<PrimitiveValue>>>()
   private watch: QueuedIterator<KvEntry> | undefined
   private active = false
   private initialized = false
@@ -28,7 +31,7 @@ export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements 
    * @param namespace - Namespace for the existing configuration
    * @returns Initialized ConfigEngine instance
    */
-  public static async connect<T extends { [K in keyof T]: ConfigValue }>(
+  public static async connect<T extends ConfigurationSchema<T>>(
     natsClient: NatsConnection,
     namespace: string
   ): Promise<IConfigEngine<T>> {
@@ -76,39 +79,38 @@ export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements 
     this.watchers.clear()
   }
 
-  public get<K extends keyof T>(path: K): T[K] {
+  public get<K extends ConfigKey<T>>(path: K): ConfigValue<T, K> {
     this.checkActive()
 
     const entry = this.config.get(this.keyFor(path)) 
-    return entry?.value as T[K]
+    return entry?.value as ConfigValue<T, K>
   }
 
-  public addListener<K extends keyof T>(
+  public addListener<K extends ConfigKey<T>>(
     path: K,
-    callback: ConfigChangeCallback<T[K]>
-  ): T[K] {
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+  ): Extract<ConfigValue<T, K>, PrimitiveValue> {
     this.checkActive()
     const key = this.keyFor(path)
 
     const callbacks = this.watchers.get(key) ?? new Set()
-    callbacks.add(callback as ConfigChangeCallback<ConfigValue>)
+    callbacks.add(callback as ConfigChangeCallback<PrimitiveValue>)
 
     this.watchers.set(key, callbacks)
 
-    return this.get(path)
+    return this.get(path) as Extract<ConfigValue<T, K>, PrimitiveValue>
   }
 
-  public removeListener<K extends keyof T>(
+  public removeListener<K extends ConfigKey<T>>(
     path: K,
-    callback: ConfigChangeCallback<T[K]>
-  ): boolean {
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+  ): void {
     const key = this.keyFor(path)
     const watchers = this.watchers.get(key)
 
     if (watchers) {
-      return watchers.delete(callback as ConfigChangeCallback<ConfigValue>)
+      watchers.delete(callback as ConfigChangeCallback<PrimitiveValue>)
     }
-    return false
   }
 
   private processEntry(entry: KvEntry): void {
@@ -117,7 +119,7 @@ export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements 
 
     try {
       const value = operation === 'PUT'
-        ? jsonCodec.decode(entry.value) as ConfigValue
+        ? jsonCodec.decode(entry.value) as PrimitiveValue
         : undefined
 
       const configEntry: ConfigurationEntry = {
@@ -140,7 +142,7 @@ export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements 
 
     const watchers = this.watchers.get(key)
     if (watchers) {
-      const event: ConfigChangeEvent<ConfigValue> = {
+      const event: ConfigChangeEvent<PrimitiveValue> = {
         key,
         oldValue: oldValue?.value,
         newValue: configEntry.value,
@@ -157,7 +159,7 @@ export class ConfigEngine<T extends { [K in keyof T]: ConfigValue }> implements 
     }
   }
 
-  private keyFor<K extends keyof T>(path: K): string {
+  private keyFor<K extends ConfigKey<T>>(path: K): string {
     return namespacedKey(this.namespace, path as string)
   }
 } 

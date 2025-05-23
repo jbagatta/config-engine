@@ -7,6 +7,16 @@ export interface TestConfiguration {
   optionalString?: string
   optionalNumber?: number
   optionalBoolean?: boolean
+  nested: {
+    nestedString: string
+    nestedOptionalNumber?: number
+    nestedOptionalBoolean?: boolean
+    doubleNested: {
+      nestedOptionalString?: string
+      nestedNumber: number
+      nestedBoolean: boolean
+    }
+  }
 }
 
 export async function engineNatsClient(): Promise<NatsConnection> {

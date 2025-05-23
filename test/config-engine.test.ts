@@ -12,7 +12,17 @@ describe('ConfigEngine', () => {
     requiredBoolean: true,
     optionalString: 'optional',
     optionalNumber: 123,
-    optionalBoolean: false
+    optionalBoolean: false,
+    nested: {
+      nestedString: 'nested',
+      nestedOptionalNumber: 42,
+      nestedOptionalBoolean: true,
+      doubleNested: {
+        nestedOptionalString: 'double nested',
+        nestedNumber: 42,
+        nestedBoolean: true
+      }
+    }
   }
 
   let managerClient: NatsConnection
@@ -59,7 +69,14 @@ describe('ConfigEngine', () => {
       const minimalConfig: TestConfiguration = {
         requiredString: 'test',
         requiredNumber: 42,
-        requiredBoolean: true
+        requiredBoolean: true,
+        nested: {
+          nestedString: 'nested',
+          doubleNested: {
+            nestedNumber: 42,
+            nestedBoolean: true
+          }
+        }
       }
 
       await ConfigEngineManager.create(managerClient, {
@@ -70,13 +87,24 @@ describe('ConfigEngine', () => {
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
 
+      const kv = await engineClient.jetstream().views.kv(namespace, { bindOnly: true })
+      const keys = await kv.keys()
+      for await (const key of keys) {
+        console.error(key)
+      }
+
       expect(engine.get('requiredString')).toBe('test')
       expect(engine.get('requiredNumber')).toBe(42)
       expect(engine.get('requiredBoolean')).toBe(true)
       expect(engine.get('optionalString')).toBe(undefined)
       expect(engine.get('optionalNumber')).toBe(undefined)
       expect(engine.get('optionalBoolean')).toBe(undefined)
-
+      expect(engine.get('nested.nestedString')).toBe('nested')  
+      expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
+      expect(engine.get('nested.nestedOptionalBoolean')).toBe(undefined)
+      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(undefined)
+      expect(engine.get('nested.doubleNested.nestedNumber')).toBe(42)
+      expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(true)
       engine.close()
     })
   })

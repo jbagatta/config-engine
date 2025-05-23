@@ -3,12 +3,16 @@ import {
   ConfigValue,
   IConfigEngineManager,
   ConfigEngineManagerSettings,
+  ConfigurationSchema,
+  PrimitiveValue,
+  ConfigKey,
+  RecursivePartial,
 } from './types'
-import { namespacedKey } from './util'
+import { getConfigKeysAndValues, namespacedKey } from './util'
 
 const jsonCodec = JSONCodec()
 
-export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> implements IConfigEngineManager<T> {
+export class ConfigEngineManager<T extends ConfigurationSchema<T>> implements IConfigEngineManager<T> {
   private constructor(private readonly kv: KV, private readonly namespace: string) { }
  
   /**
@@ -18,7 +22,7 @@ export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> impl
    * @param settings - Configuration settings
    * @returns Initialized ConfigEngineManager instance
    */
-  public static async create<T extends { [K in keyof T]: ConfigValue }>(
+  public static async create<T extends ConfigurationSchema<T>>(
     natsClient: NatsConnection,
     settings: ConfigEngineManagerSettings<T>
   ): Promise<IConfigEngineManager<T>> {
@@ -35,15 +39,15 @@ export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> impl
    * @param patch - Partial configuration to patch
    * @returns Initialized ConfigEngineManager instance
    */
-  public static async patch<T extends { [K in keyof T]: ConfigValue }>(
+  public static async patch<T extends ConfigurationSchema<T>>(
     natsClient: NatsConnection,
     namespace: string,
-    patch: Partial<T>
+    patch: RecursivePartial<T>
   ): Promise<IConfigEngineManager<T>> {
     const manager = await ConfigEngineManager.connect<T>(natsClient, namespace)
 
-    for (const [key, value] of Object.entries(patch)) {
-      await manager.set(key as keyof T, value as T[keyof T])
+    for (const {key, value} of getConfigKeysAndValues(patch)) {
+      await manager.set(key, value)
     }
 
     return manager
@@ -55,7 +59,7 @@ export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> impl
    * @param namespace - Namespace for the existing configuration
    * @returns Initialized ConfigEngineManager instance
    */
-  public static async connect<T extends { [K in keyof T]: ConfigValue }>(
+  public static async connect<T extends ConfigurationSchema<T>>(
     natsClient: NatsConnection,
     namespace: string
   ): Promise<IConfigEngineManager<T>> {
@@ -65,7 +69,7 @@ export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> impl
     return new ConfigEngineManager<T>(kv, namespace)
   }
 
-  public async set<K extends keyof T>(path: K, value: T[K]): Promise<void> {
+  public async set<K extends ConfigKey<T>>(path: K, value: ConfigValue<T, K>): Promise<void> {
     const key = this.keyFor(path)
 
     if (value === undefined) {
@@ -79,23 +83,23 @@ export class ConfigEngineManager<T extends { [K in keyof T]: ConfigValue }> impl
     await this.kv.destroy()
   }
 
-  public async history<K extends keyof T>(path: K): Promise<T[K][]> {
+  public async history<K extends ConfigKey<T>>(path: K): Promise<ConfigValue<T, K>[]> {
     const history = await this.kv.history({ key: this.keyFor(path) })
 
-    const values: { val: T[K], revision: number }[] = []
+    const values: { val: ConfigValue<T, K>, revision: number }[] = []
     for await (const entry of history) {
       const value = entry.operation === 'PUT'
-        ? jsonCodec.decode(entry.value) as ConfigValue
+        ? jsonCodec.decode(entry.value) as PrimitiveValue
         : undefined
 
-      values.push({ val: value as T[K], revision: entry.revision })
+      values.push({ val: value as ConfigValue<T, K>, revision: entry.revision })
     }
     values.sort((a, b) => a.revision - b.revision)
 
     return values.map(v => v.val)
   }
 
-  private keyFor<K extends keyof T>(path: K): string {
+  private keyFor<K extends ConfigKey<T>>(path: K): string {
     return namespacedKey(this.namespace, path as string)
   }
 } 

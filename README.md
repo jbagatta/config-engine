@@ -2,11 +2,13 @@
 
 A strongly-typed configuration engine library built on NATS JetStream KV that provides dynamic, live-updating configuration management with type-enforcement and local persistence.
 
+Configuration schemas can be any primitive (string, number, boolean, undefined).
+
 ## Features
 
 - 🔄 Live configuration watching via NATS JetStream KV watch
 - 💾 Local persistence of configuration state
-- 🎯 Strongly-typed configuration definitions
+- 🎯 Strongly-typed configuration definitions (including recursion support)
 - 🚀 Built on NATS JetStream for reliable and configurable message delivery
 
 ## Installation
@@ -18,7 +20,7 @@ npm install @jbagatta/config-engine
 ## Usage
 
 ```typescript
-import { ConfigEngine, ConfigSchema } from '@jbagatta/config-engine';
+import { ConfigEngine, ConfigEngineManager } from '@jbagatta/config-engine';
 
 // Define your configuration schema
 interface AppConfig {
@@ -35,12 +37,12 @@ interface AppConfig {
     maxConnections: number;
   };
 }
+const namespace = 'app-config'
 
-// Create a configuration engine instance
-const configEngine = new ConfigEngine<AppConfig>({
-  natsUrl: 'nats://localhost:4222',
-  bucketName: 'app-config',
-  // Optional: Define default values
+// Create a configuration using the manager
+const manager = ConfigEngineManager.create<AppConfig>(natsClient, {
+  namespace: namespace,
+  kvOptions: { replicas: 1, history: 2 },
   defaults: {
     database: {
       host: 'localhost',
@@ -58,32 +60,20 @@ const configEngine = new ConfigEngine<AppConfig>({
 });
 
 // Start the configuration engine
-await configEngine.connect();
+const engine = await ConfigEngine.connect<AppConfig>(natsClient, namespace)
 
-// Get configuration values
-const dbHost = configEngine.get('database.host');
-const maxConnections = configEngine.get('features.maxConnections');
+// Get configuration values (type-enforced)
+const dbHost = engine.get('database.host');                    // returns a string
+const maxConnections = engine.get('features.maxConnections');  // returns a number
 
 // Subscribe to configuration changes
-configEngine.onChange('database.credentials', (newValue) => {
+configEngine.addListener('database.credentials.username', (newValue) => {
   console.log('Database credentials updated:', newValue);
 });
 
-// Update configuration
-await configEngine.set('features.enableCache', false);
+// Update configuration (type-enforced)
+await manager.set('features.enableCache', false);  // requires a boolean value
 ```
-
-## Development
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the project:
-   ```bash
-   npm run build
-   ```
 
 ## License
 
