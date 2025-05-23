@@ -80,10 +80,15 @@ const maxConnections = engine.get('features.maxConnections');  // returns a numb
 // COMPILER ERROR - key does not exist on schema
 const trialLength = engine.get('trialLength');  
 
-// Subscribe to configuration changes
-configEngine.addListener('database.credentials.username', (newValue: string) => {
-  console.log('Database credentials updated:', newValue);
+// Assign callbacks to configuration changes
+engine.addListener('database.credentials.username', (event: ConfigChangeEvent<string>) => {
+  console.log('Database credentials updated:', event.key, event.oldValue, event.newValue, event.timestamp);
 });
+
+engine.close()
+
+// delete the configuration permanently
+await manager.destroy()
 
 ```
 
