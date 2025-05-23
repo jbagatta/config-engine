@@ -29,7 +29,7 @@ export class ConfigEngineManager<T extends ConfigurationSchema<T>> implements IC
   ): Promise<IConfigEngineManager<T>> {
     await natsClient.jetstream().views.kv(settings.namespace, settings.kvOptions)
 
-    return ConfigEngineManager.patch(natsClient, settings.namespace, settings.defaults)
+    return ConfigEngineManager.patch(natsClient, settings.namespace, settings.defaults as RecursivePartial<T>)
   }
 
   /**

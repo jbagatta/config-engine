@@ -111,7 +111,7 @@ export interface ConfigEngineManagerSettings<T extends ConfigurationSchema<T>> {
   kvOptions: Partial<KvOptions>
 
   /** Initial values for configuration keys */
-  defaults: RecursivePartial<T>
+  defaults: T
 }
 
 export interface ConfigHistoryEntry<T> {
@@ -141,6 +141,6 @@ export interface IConfigEngineManager<T extends ConfigurationSchema<T>> {
    */
   history<K extends ConfigKey<T>>(path: K): Promise<ConfigHistoryEntry<T>[]>
 
-  /** Delete the configuration namespace */
+  /** PERMANENTLY delete the configuration namespace */
   destroy(): Promise<void>
 }
