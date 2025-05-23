@@ -1,16 +1,29 @@
 # Config Engine
 
-A strongly-typed configuration engine library built on NATS JetStream KV that provides dynamic, live-updating configuration management with type-enforcement and change watching.
+A strongly-typed configuration management library built on Nats JetStream KV that provides dynamic, live-updating configuration management with type-enforcement and change watching.
 
 ## Features
 
-- 🎯 Strongly-typed configuration definitions (including recursive schema support)
-- 🔄 Live configuration watching via NATS JetStream KV watch
+- 🎯 Strongly-typed configuration schema enforcement (including recursion support)
+- 🔄 Live configuration watching via JetStream KV watch
 - 📜 Configuration value history tracking and retrieval
-- 💾 Local, up-to-date syncing of configuration state
-- 🚀 Built on NATS JetStream for reliable and configurable message delivery
+- 💾 Locally-persisted, up-to-date syncing of configuration state
+
+### Strongly-Typed Configuration Schema Enforcement
 
 Configuration schemas can contain properties of any optional/required primitive type (string, number, boolean), as well as objects that recursively meet that requirement. Typescript type magic enforces strong typing of both the keys and the corresponding value types across all configuration operations.
+
+### Live configuration watching
+
+Callbacks can be assigned to listen for configuration key changes to allow event-driven, realtime responsiveness to system configuration changes.
+
+### Configuration History
+
+Jetstream KV supports configurable per-key configuration history.
+
+### Realtime synchronization
+
+Jetstream KV operates as a stream consumer under the hood, meaning an entire configuration namespace can be subscribed to and persisted locally.
 
 ## Usage
 
