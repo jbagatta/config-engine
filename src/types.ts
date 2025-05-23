@@ -7,10 +7,7 @@ export type RecursivePartial<T> = {
     T[P]
 }
 
-/** Valid primitive value types */
 export type PrimitiveValue = string | number | boolean | undefined
-
-/** Recursive type that enforces all properties must be primitive values or objects matching this definition */
 type RecursivePrimitive<T> = {
   [K in keyof T]: T[K] extends PrimitiveValue 
     ? T[K] 
@@ -20,14 +17,25 @@ type RecursivePrimitive<T> = {
 }
 export type ConfigurationSchema<T> = RecursivePrimitive<T>
 
+/**
+ * A configuration key, mapping to a primitive value on a ConfigurationSchema.
+ * May be nested ('a.b.c') or top-level ('a')
+ */
 export type ConfigKey<T> = T extends ConfigurationSchema<T> 
   ? T extends object
     ? {
-        [K in keyof T]: K extends string ? T[K] extends PrimitiveValue ? `${K}` : T[K] extends object ? `${K}.${ConfigKey<T[K]>}` : never : never
+      [K in keyof T]: K extends string 
+        ? T[K] extends PrimitiveValue 
+          ? `${K}` 
+          : T[K] extends object 
+            ? `${K}.${ConfigKey<T[K]>}` 
+            : never 
+        : never
       }[keyof T]
     : never
   : never
 
+/** Type-enforced primitive value for an assignable ConfigKey */
 export type ConfigValue<T, P extends ConfigKey<T>> = T extends ConfigurationSchema<T> 
   ? P extends keyof T 
     ? T[P] 
@@ -55,7 +63,8 @@ export interface ConfigChangeEvent<K extends PrimitiveValue> {
 } 
 
 /** Callback function for handling configuration change events */
-export type ConfigChangeCallback<K extends PrimitiveValue> = (event: ConfigChangeEvent<K>) => Promise<void>
+export type ConfigChangeCallback<K extends PrimitiveValue> = 
+  (event: ConfigChangeEvent<K>) => Promise<void>
 
 /** 
  * Configuration engine for reading configuration values 
@@ -75,14 +84,20 @@ export interface IConfigEngine<T extends ConfigurationSchema<T>> {
    * @param callback - Callback for when the value changes
    * @returns The current value for the configuration key
    */
-  addListener<K extends ConfigKey<T>>(path: K, callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>): Extract<ConfigValue<T, K>, PrimitiveValue>
+  addListener<K extends ConfigKey<T>>(
+    path: K, 
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+  ): Extract<ConfigValue<T, K>, PrimitiveValue>
 
   /** 
    * Remove a previously added listener
    * @param path - The configuration key being watched
    * @param callback - Callback to remove
    */
-  removeListener<K extends ConfigKey<T>>(path: K, callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>): void
+  removeListener<K extends ConfigKey<T>>(
+    path: K, 
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+  ): void
 
   /** Close the configuration engine and cleans up resources */
   close(): void
@@ -97,6 +112,14 @@ export interface ConfigEngineManagerSettings<T extends ConfigurationSchema<T>> {
 
   /** Initial values for configuration keys */
   defaults: RecursivePartial<T>
+}
+
+export interface ConfigHistoryEntry<T> {
+  /** Timestamp when the value was set (milliseconds since epoch) */
+  timestamp: number
+
+  /** The value that was set */
+  value: ConfigValue<T, ConfigKey<T>>
 }
 
 /**
@@ -114,9 +137,9 @@ export interface IConfigEngineManager<T extends ConfigurationSchema<T>> {
   /** 
    * Get the configuration value history for a key
    * @param path - The configuration key
-   * @returns Array of historical values, sorted in chronological order
+   * @returns Array of ConfigHistoryEntries, sorted in chronological order
    */
-  history<K extends ConfigKey<T>>(path: K): Promise<ConfigValue<T, K>[]>
+  history<K extends ConfigKey<T>>(path: K): Promise<ConfigHistoryEntry<T>[]>
 
   /** Delete the configuration namespace */
   destroy(): Promise<void>

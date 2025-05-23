@@ -7,6 +7,7 @@ import {
   PrimitiveValue,
   ConfigKey,
   RecursivePartial,
+  ConfigHistoryEntry,
 } from './types'
 import { getConfigKeysAndValues, namespacedKey } from './util'
 
@@ -83,20 +84,23 @@ export class ConfigEngineManager<T extends ConfigurationSchema<T>> implements IC
     await this.kv.destroy()
   }
 
-  public async history<K extends ConfigKey<T>>(path: K): Promise<ConfigValue<T, K>[]> {
+  public async history<K extends ConfigKey<T>>(path: K): Promise<ConfigHistoryEntry<T>[]> {
     const history = await this.kv.history({ key: this.keyFor(path) })
 
-    const values: { val: ConfigValue<T, K>, revision: number }[] = []
+    const values: ConfigHistoryEntry<T>[] = []
     for await (const entry of history) {
       const value = entry.operation === 'PUT'
         ? jsonCodec.decode(entry.value) as PrimitiveValue
         : undefined
 
-      values.push({ val: value as ConfigValue<T, K>, revision: entry.revision })
+      values.push({ 
+        value: value as ConfigValue<T, K>, 
+        timestamp: entry.created.getTime()
+      })
     }
-    values.sort((a, b) => a.revision - b.revision)
+    values.sort((a, b) => a.timestamp - b.timestamp)
 
-    return values.map(v => v.val)
+    return values
   }
 
   private keyFor<K extends ConfigKey<T>>(path: K): string {

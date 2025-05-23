@@ -299,12 +299,32 @@ describe('ConfigEngineManager', () => {
       await manager.set('optionalString', undefined)
       await manager.set('optionalString', 'final')
 
-      expect(await manager.history('optionalString')).toEqual([
-        fullConfig.optionalString,
-        'first',
-        'second',
-        undefined,
-        'final'
+      const history = await manager.history('optionalString')
+      expect(history.map((h) => h.timestamp)).toEqual(
+        history.map((h) => h.timestamp).sort((a, b) => a - b)
+      )
+
+      expect(history).toEqual([
+        expect.objectContaining({
+          value: fullConfig.optionalString,
+          timestamp: expect.any(Number)
+        }),
+        expect.objectContaining({
+          value: 'first',
+          timestamp: expect.any(Number)
+        }),
+        expect.objectContaining({
+          value: 'second',
+          timestamp: expect.any(Number)
+        }),
+        expect.objectContaining({
+          value: undefined,
+          timestamp: expect.any(Number)
+        }),
+        expect.objectContaining({
+          value: 'final',
+          timestamp: expect.any(Number)
+        })
       ])
     })
 

@@ -15,6 +15,7 @@ const jsonCodec = JSONCodec()
 interface ConfigurationEntry {
   value: PrimitiveValue
   revision: number
+  timestamp: number
 }
 
 export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEngine<T> {
@@ -124,7 +125,8 @@ export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEn
 
       const configEntry: ConfigurationEntry = {
         value: value,
-        revision: entry.revision
+        revision: entry.revision,
+        timestamp: entry.created.getTime()
       }
       this.handleConfigChange(key, configEntry)
     } catch (error) {
@@ -146,7 +148,7 @@ export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEn
         key,
         oldValue: oldValue?.value,
         newValue: configEntry.value,
-        timestamp: Date.now()
+        timestamp: configEntry.timestamp
       }
 
       Array.from(watchers).map(callback => callback(event).catch(console.error))
