@@ -4,10 +4,10 @@ A strongly-typed configuration management library built on Nats JetStream KV tha
 
 ## Features
 
-- 🎯 Strongly-typed configuration schema enforcement (including recursion support)
-- 🔄 Live configuration watching via JetStream KV watch
-- 📜 Configuration value history tracking and retrieval
-- 💾 Locally-persisted, up-to-date syncing of configuration state
+- Strongly-typed configuration schema enforcement (including recursion support)
+- Live configuration watching via JetStream KV watch
+- Configuration value history tracking and retrieval
+- Locally-persisted, up-to-date syncing of configuration state
 
 ### Strongly-Typed Configuration Schema Enforcement
 
@@ -103,6 +103,19 @@ engine.close()
 // delete the configuration permanently
 await manager.destroy()
 
+```
+
+## Running Tests
+
+Spin up a test environment using docker compose:
+```
+cd test/setup
+docker compose up -d
+```
+
+and then run the tests as usual:
+```
+npm test
 ```
 
 ## License
