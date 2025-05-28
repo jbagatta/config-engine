@@ -4,7 +4,7 @@ import {
   IConfigEngineManager,
   ConfigEngineManagerSettings,
   ConfigurationSchema,
-  PrimitiveValue,
+  ConfigValueType ,
   ConfigKey,
   RecursivePartial,
   ConfigHistoryEntry,
@@ -90,7 +90,7 @@ export class ConfigEngineManager<T extends ConfigurationSchema<T>> implements IC
     const values: ConfigHistoryEntry<T>[] = []
     for await (const entry of history) {
       const value = entry.operation === 'PUT'
-        ? jsonCodec.decode(entry.value) as PrimitiveValue
+        ? jsonCodec.decode(entry.value) as ConfigValueType
         : undefined
 
       values.push({ 

@@ -5,7 +5,7 @@ import {
   ConfigChangeEvent,
   ConfigChangeCallback,
   ConfigurationSchema,
-  PrimitiveValue,
+  ConfigValueType,
   ConfigKey,
 } from './types'
 import { namespacedKey, namespaceWatchFilter } from './util'
@@ -13,14 +13,14 @@ import { namespacedKey, namespaceWatchFilter } from './util'
 const jsonCodec = JSONCodec()
  
 interface ConfigurationEntry {
-  value: PrimitiveValue
+  value: ConfigValueType
   revision: number
   timestamp: number
 }
 
 export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEngine<T> {
   private config = new Map<string, ConfigurationEntry>()
-  private watchers = new Map<string, Set<ConfigChangeCallback<PrimitiveValue>>>()
+  private watchers = new Map<string, Set<ConfigChangeCallback<ConfigValueType>>>()
   private watch: QueuedIterator<KvEntry> | undefined
   private active = false
   private initialized = false
@@ -89,28 +89,28 @@ export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEn
 
   public addListener<K extends ConfigKey<T>>(
     path: K,
-    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
-  ): Extract<ConfigValue<T, K>, PrimitiveValue> {
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, ConfigValueType>>
+  ): Extract<ConfigValue<T, K>, ConfigValueType> {
     this.checkActive()
     const key = this.keyFor(path)
 
     const callbacks = this.watchers.get(key) ?? new Set()
-    callbacks.add(callback as ConfigChangeCallback<PrimitiveValue>)
+    callbacks.add(callback as ConfigChangeCallback<ConfigValueType>)
 
     this.watchers.set(key, callbacks)
 
-    return this.get(path) as Extract<ConfigValue<T, K>, PrimitiveValue>
+    return this.get(path) as Extract<ConfigValue<T, K>, ConfigValueType>
   }
 
   public removeListener<K extends ConfigKey<T>>(
     path: K,
-    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, ConfigValueType>>
   ): void {
     const key = this.keyFor(path)
     const watchers = this.watchers.get(key)
 
     if (watchers) {
-      watchers.delete(callback as ConfigChangeCallback<PrimitiveValue>)
+      watchers.delete(callback as ConfigChangeCallback<ConfigValueType>)
     }
   }
 
@@ -120,7 +120,7 @@ export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEn
 
     try {
       const value = operation === 'PUT'
-        ? jsonCodec.decode(entry.value) as PrimitiveValue
+        ? jsonCodec.decode(entry.value) as ConfigValueType
         : undefined
 
       const configEntry: ConfigurationEntry = {
@@ -144,7 +144,7 @@ export class ConfigEngine<T extends ConfigurationSchema<T>> implements IConfigEn
 
     const watchers = this.watchers.get(key)
     if (watchers) {
-      const event: ConfigChangeEvent<PrimitiveValue> = {
+      const event: ConfigChangeEvent<ConfigValueType> = {
         key,
         oldValue: oldValue?.value,
         newValue: configEntry.value,

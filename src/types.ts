@@ -1,21 +1,18 @@
 import { KvOptions } from 'nats'
 
-export type RecursivePartial<T> = {
-  [P in keyof T]?:
-    T[P] extends (infer U)[] ? RecursivePartial<U>[] :
-    T[P] extends object | undefined ? RecursivePartial<T[P]> :
-    T[P]
-}
+type Primitive = string | number | boolean | undefined
+export type ConfigValueType = Primitive | Primitive[]
 
-export type PrimitiveValue = string | number | boolean | undefined
-type RecursivePrimitive<T> = {
-  [K in keyof T]: T[K] extends PrimitiveValue 
+type RecursiveConfigValueType<T> = {
+  [K in keyof T]: T[K] extends ConfigValueType 
     ? T[K] 
     : T[K] extends object 
-      ? RecursivePrimitive<T[K]>
+      ? RecursiveConfigValueType<T[K]>
       : never
 }
-export type ConfigurationSchema<T> = RecursivePrimitive<T>
+
+/** A schema defining the configuration namespace. */
+export type ConfigurationSchema<T> = RecursiveConfigValueType<T>
 
 /**
  * A configuration key, mapping to a primitive value on a ConfigurationSchema.
@@ -25,7 +22,7 @@ export type ConfigKey<T> = T extends ConfigurationSchema<T>
   ? T extends object
     ? {
       [K in keyof T]: K extends string 
-        ? T[K] extends PrimitiveValue 
+        ? T[K] extends ConfigValueType 
           ? `${K}` 
           : T[K] extends object 
             ? `${K}.${ConfigKey<T[K]>}` 
@@ -51,7 +48,7 @@ export type ConfigValue<T, P extends ConfigKey<T>> = T extends ConfigurationSche
   : never
 
 /** Event emitted when a configuration value changes */
-export interface ConfigChangeEvent<K extends PrimitiveValue> {
+export interface ConfigChangeEvent<K extends ConfigValueType> {
   /** The modified key */
   key: string
   /** The previous value */
@@ -63,7 +60,7 @@ export interface ConfigChangeEvent<K extends PrimitiveValue> {
 } 
 
 /** Callback function for handling configuration change events */
-export type ConfigChangeCallback<K extends PrimitiveValue> = 
+export type ConfigChangeCallback<K extends ConfigValueType> = 
   (event: ConfigChangeEvent<K>) => Promise<void>
 
 /** 
@@ -86,8 +83,8 @@ export interface IConfigEngine<T extends ConfigurationSchema<T>> {
    */
   addListener<K extends ConfigKey<T>>(
     path: K, 
-    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
-  ): Extract<ConfigValue<T, K>, PrimitiveValue>
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, ConfigValueType>>
+  ): Extract<ConfigValue<T, K>, ConfigValueType>
 
   /** 
    * Remove a previously added listener
@@ -96,7 +93,7 @@ export interface IConfigEngine<T extends ConfigurationSchema<T>> {
    */
   removeListener<K extends ConfigKey<T>>(
     path: K, 
-    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, PrimitiveValue>>
+    callback: ConfigChangeCallback<Extract<ConfigValue<T, K>, ConfigValueType>>
   ): void
 
   /** Close the configuration engine and cleans up resources */
@@ -143,4 +140,11 @@ export interface IConfigEngineManager<T extends ConfigurationSchema<T>> {
 
   /** PERMANENTLY delete the configuration namespace */
   destroy(): Promise<void>
+}
+
+export type RecursivePartial<T> = {
+  [P in keyof T]?:
+    T[P] extends (infer U)[] ? RecursivePartial<U>[] :
+    T[P] extends object | undefined ? RecursivePartial<T[P]> :
+    T[P]
 }

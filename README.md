@@ -11,7 +11,13 @@ A strongly-typed configuration management library built on Nats JetStream KV tha
 
 ### Strongly-Typed Configuration Schema Enforcement
 
-Configuration schemas can contain properties of any optional/required primitive type (string, number, boolean), as well as objects that recursively meet that requirement. Typescript type magic enforces strong typing of both the keys and the corresponding value types across all configuration operations.
+Configuration schemas support properties of the following optional or required types:
+
+- Primitive types (string, number, boolean)
+- Arrays of such primitive types (string[], number[], boolean[])
+- Nested objects that recursively meet the above requirements
+
+Typescript type magic enforces strong typing of both the keys and the corresponding value types across all configuration operations.
 
 ### Live configuration watching
 
@@ -32,6 +38,8 @@ import { ConfigEngine, ConfigEngineManager } from '@jbagatta/config-engine';
 
 // Define your configuration schema
 interface AppConfig {
+  blockedUsers?: string[]
+  organization?: string
   database: {
     host: string,
     port: number,
@@ -54,6 +62,8 @@ const manager = ConfigEngineManager.create<AppConfig>(natsClient, {
   namespace: namespace,
   kvOptions: { replicas: 1, history: 2 },
   defaults: {
+    blockedUsers: ['user1', 'user2'],
+    organization: 'random org',
     database: {
       host: 'localhost',
       port: 5432,
@@ -71,12 +81,14 @@ const manager = ConfigEngineManager.create<AppConfig>(natsClient, {
 
 // Update configuration (type-enforced)
 await manager.set('features.enableCache', false);  // requires a boolean value
+await manager.set('organization', undefined);      // requires a string | undefined value
 
 // COMPILER ERROR - key does not exist on schema
 await manager.set('trialLength', 7); 
 
 // COMPILER ERROR - incorrect value type
 await manager.set('database.credentials', 101); 
+await manager.set('database.credentials', undefined);  // non-optional key 
 
 // Retrieve configuration history, if enabled
 await manager.history('features.enableCache');  // [true, false]
@@ -89,6 +101,7 @@ const engine = await ConfigEngine.connect<AppConfig>(natsClient, namespace)
 // Get configuration values (type-enforced)
 const dbHost = engine.get('database.host');                    // returns a string
 const maxConnections = engine.get('features.maxConnections');  // returns a number
+const blockedUsers = engine.get('blockedUsers');               // returns a string[]
 
 // COMPILER ERROR - key does not exist on schema
 const trialLength = engine.get('trialLength');  

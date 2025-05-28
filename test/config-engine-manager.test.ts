@@ -47,12 +47,17 @@ describe('ConfigEngineManager', () => {
       expect(engine.get('optionalString')).toBe(fullConfig.optionalString)
       expect(engine.get('optionalNumber')).toBe(fullConfig.optionalNumber)
       expect(engine.get('optionalBoolean')).toBe(fullConfig.optionalBoolean)
+      expect(engine.get('stringArray')).toStrictEqual(fullConfig.stringArray)
+      expect(engine.get('booleanArray')).toStrictEqual(fullConfig.booleanArray)
       expect(engine.get('nested.nestedString')).toBe(fullConfig.nested.nestedString)  
       expect(engine.get('nested.nestedOptionalNumber')).toBe(fullConfig.nested.nestedOptionalNumber)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(fullConfig.nested.nestedOptionalBoolean)
+      expect(engine.get('nested.nestedOptionalNumberArray')).toStrictEqual(fullConfig.nested.nestedOptionalNumberArray)
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
+      expect(engine.get('nested.doubleNested.nestedBooleanArray')).toStrictEqual(fullConfig.nested.doubleNested.nestedBooleanArray)
+      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
 
       engine.close()
     })
@@ -68,17 +73,22 @@ describe('ConfigEngineManager', () => {
       })
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
+
       expect(engine.get('requiredString')).toBe(minimalConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(minimalConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(minimalConfig.requiredBoolean)
+      expect(engine.get('stringArray')).toStrictEqual(minimalConfig.stringArray)
+      expect(engine.get('booleanArray')).toStrictEqual(minimalConfig.booleanArray)
       expect(engine.get('nested.nestedString')).toBe(minimalConfig.nested.nestedString)  
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(minimalConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(minimalConfig.nested.doubleNested.nestedBoolean)
+      expect(engine.get('nested.doubleNested.nestedBooleanArray')).toStrictEqual(minimalConfig.nested.doubleNested.nestedBooleanArray)
       expect(engine.get('optionalString')).toBe(undefined)
       expect(engine.get('optionalNumber')).toBe(undefined)
       expect(engine.get('optionalBoolean')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(undefined)
+      expect(engine.get('nested.nestedOptionalNumberArray')).toBe(undefined)
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(undefined)
 
       engine.close()
@@ -104,18 +114,24 @@ describe('ConfigEngineManager', () => {
       })
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
+     
       expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(fullConfig.requiredBoolean)
       expect(engine.get('optionalString')).toBe(fullConfig.optionalString)
       expect(engine.get('optionalNumber')).toBe(fullConfig.optionalNumber)
       expect(engine.get('optionalBoolean')).toBe(fullConfig.optionalBoolean)
+      expect(engine.get('stringArray')).toStrictEqual(fullConfig.stringArray)
+      expect(engine.get('booleanArray')).toStrictEqual(fullConfig.booleanArray)
       expect(engine.get('nested.nestedString')).toBe(fullConfig.nested.nestedString)  
       expect(engine.get('nested.nestedOptionalNumber')).toBe(fullConfig.nested.nestedOptionalNumber)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(fullConfig.nested.nestedOptionalBoolean)
+      expect(engine.get('nested.nestedOptionalNumberArray')).toStrictEqual(fullConfig.nested.nestedOptionalNumberArray)
       expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
+      expect(engine.get('nested.doubleNested.nestedBooleanArray')).toStrictEqual(fullConfig.nested.doubleNested.nestedBooleanArray)
+      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
 
       engine.close()
     })
@@ -151,6 +167,7 @@ describe('ConfigEngineManager', () => {
       const patch: RecursivePartial<TestConfiguration> = {
         optionalString: 'patched',
         optionalNumber: 456,
+        stringArray: ['new1', 'new2'],
         nested: {
           nestedString: 'updated',
           doubleNested: {
@@ -161,11 +178,14 @@ describe('ConfigEngineManager', () => {
       await ConfigEngineManager.patch(managerClient, namespace, patch)
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
+
       expect(engine.get('requiredString')).toBe(minimalConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(minimalConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(minimalConfig.requiredBoolean)
+      expect(engine.get('booleanArray')).toStrictEqual(minimalConfig.booleanArray)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(minimalConfig.nested.doubleNested!.nestedNumber)
       expect(engine.get('optionalBoolean')).toBe(undefined)
+      expect(engine.get('stringArray')).toStrictEqual(patch.stringArray)
       expect(engine.get('optionalString')).toBe(patch.optionalString)
       expect(engine.get('optionalNumber')).toBe(patch.optionalNumber)
       expect(engine.get('nested.nestedString')).toBe(patch.nested!.nestedString)
@@ -189,22 +209,31 @@ describe('ConfigEngineManager', () => {
         optionalNumber: undefined,
         nested: {
           nestedOptionalNumber: undefined,
+          nestedOptionalNumberArray: undefined,
+          doubleNested: {
+            nestedOptionalString: undefined
+          }
         }
       }
       await ConfigEngineManager.patch(managerClient, namespace, patch)
 
       const engine = await ConfigEngine.connect<TestConfiguration>(engineClient, namespace)
+
       expect(engine.get('requiredString')).toBe(fullConfig.requiredString)
       expect(engine.get('requiredNumber')).toBe(fullConfig.requiredNumber)
       expect(engine.get('requiredBoolean')).toBe(fullConfig.requiredBoolean)
       expect(engine.get('optionalBoolean')).toBe(fullConfig.optionalBoolean)
+      expect(engine.get('stringArray')).toStrictEqual(fullConfig.stringArray)
+      expect(engine.get('booleanArray')).toStrictEqual(fullConfig.booleanArray)
       expect(engine.get('nested.nestedOptionalBoolean')).toBe(fullConfig.nested.nestedOptionalBoolean)
-      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(fullConfig.nested.doubleNested.nestedOptionalString)
+      expect(engine.get('nested.doubleNested.nestedBooleanArray')).toStrictEqual(fullConfig.nested.doubleNested.nestedBooleanArray)
       expect(engine.get('nested.doubleNested.nestedNumber')).toBe(fullConfig.nested.doubleNested.nestedNumber)
       expect(engine.get('nested.doubleNested.nestedBoolean')).toBe(fullConfig.nested.doubleNested.nestedBoolean)
       expect(engine.get('optionalString')).toBe(undefined)
       expect(engine.get('optionalNumber')).toBe(undefined)
       expect(engine.get('nested.nestedOptionalNumber')).toBe(undefined)
+      expect(engine.get('nested.nestedOptionalNumberArray')).toBe(undefined)
+      expect(engine.get('nested.doubleNested.nestedOptionalString')).toBe(undefined)
 
       engine.close()
     })
@@ -251,11 +280,18 @@ describe('ConfigEngineManager', () => {
       
       const newStringVal = 'new string value'
       const newNumberVal = 789
+      const newStringArrayVal = ['new1', 'new2']
+      const newBooleanArrayVal = [true, true, true]
+      
       await manager.set('optionalString', newStringVal)
       await manager.set('optionalNumber', newNumberVal)
+      await manager.set('stringArray', newStringArrayVal)
+      await manager.set('booleanArray', newBooleanArrayVal)
 
       expect(engine.get('optionalString')).toEqual(newStringVal)
       expect(engine.get('optionalNumber')).toEqual(newNumberVal)
+      expect(engine.get('stringArray')).toStrictEqual(newStringArrayVal)
+      expect(engine.get('booleanArray')).toStrictEqual(newBooleanArrayVal)
 
       engine.close()
     })

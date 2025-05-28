@@ -7,14 +7,18 @@ export interface TestConfiguration {
   optionalString?: string
   optionalNumber?: number
   optionalBoolean?: boolean
+  stringArray: string[]
+  booleanArray: boolean[]
   nested: {
     nestedString: string
+    nestedOptionalNumberArray?: number[]
     nestedOptionalNumber?: number
     nestedOptionalBoolean?: boolean
     doubleNested: {
-      nestedOptionalString?: string
       nestedNumber: number
       nestedBoolean: boolean
+      nestedBooleanArray: boolean[]
+      nestedOptionalString?: string
     }
   }
 }
@@ -26,14 +30,18 @@ export const fullConfig: TestConfiguration = {
   optionalString: 'optional',
   optionalNumber: 123,
   optionalBoolean: false,
+  stringArray: ['arr1', 'arr2'],
+  booleanArray: [true, false],
   nested: {
     nestedString: 'nested',
+    nestedOptionalNumberArray: [1, 2],
     nestedOptionalNumber: 42,
     nestedOptionalBoolean: true,
     doubleNested: {
       nestedOptionalString: 'double nested',
       nestedNumber: 42,
-      nestedBoolean: true
+      nestedBoolean: true,
+      nestedBooleanArray: [true, false]
     }
   }
 }
@@ -42,11 +50,14 @@ export const minimalConfig: TestConfiguration = {
   requiredString: 'min-test',
   requiredNumber: 24,
   requiredBoolean: false,
+  stringArray: ['arr1', 'arr2'],
+  booleanArray: [true, false],
   nested: {
     nestedString: 'nested',
     doubleNested: {
       nestedNumber: 42,
-      nestedBoolean: true
+      nestedBoolean: true,
+      nestedBooleanArray: [true, false]
     }
   }
 }

@@ -12,7 +12,9 @@ export function getConfigKeysAndValues<T extends ConfigurationSchema<T>>(config:
   const entries: { key: ConfigKey<T>, value: ConfigValue<T, ConfigKey<T>> }[] = []
 
   for (const [key, value] of Object.entries(config)) {
-    if (typeof value === 'object' && value !== null) {
+    if (Array.isArray(value)) {
+      entries.push({ key: key as ConfigKey<T>, value: value as ConfigValue<T, ConfigKey<T>> })
+    } else if (typeof value === 'object' && value !== null) {
       entries.push(...getConfigKeysAndValues(value as RecursivePartial<T>).map(({ key: k, value: v }) => ({ key: `${key}.${k}` as ConfigKey<T>, value: v as ConfigValue<T, ConfigKey<T>> })))
     } else {
       entries.push({ key: key as ConfigKey<T>, value: value as ConfigValue<T, ConfigKey<T>> })
