@@ -1,23 +1,23 @@
 # Config Engine
 
-A strongly-typed configuration management library built on Nats JetStream KV that provides dynamic, live-updating configuration management with type-enforcement and change watching.
+A strongly-typed configuration management library built on Nats JetStream K/V that provides dynamic, live-updating configuration management with type-enforcement and change watching.
 
 ## Features
 
-- Strongly-typed configuration schema enforcement (including recursion support)
-- Live configuration watching via JetStream KV watch
+- Strongly-typed configuration schema enforcement (including recursion and array support)
+- Live configuration watching via JetStream K/V watch
 - Configuration value history tracking and retrieval
 - Locally-persisted, up-to-date syncing of configuration state
 
 ### Strongly-Typed Configuration Schema Enforcement
 
-Configuration schemas support properties of the following optional or required types:
+Configuration schemas support properties of the following types (optional or required):
 
 - Primitive types (string, number, boolean)
-- Arrays of such primitive types (string[], number[], boolean[])
+- Arrays of primitive types (string[], number[], boolean[])
 - Nested objects that recursively meet the above requirements
 
-Typescript type magic enforces strong typing of both the keys and the corresponding value types across all configuration operations.
+Typescript type magic enforces strong typing of both the keys and the corresponding value types across all configuration engine operations.
 
 ### Live configuration watching
 
@@ -25,11 +25,11 @@ Callbacks can be assigned to listen for configuration key changes to allow event
 
 ### Configuration History
 
-Jetstream KV supports configurable per-key configuration history.
+Jetstream K/V supports configurable per-key configuration history.
 
 ### Realtime synchronization
 
-Jetstream KV operates as a stream consumer under the hood, meaning an entire configuration namespace can be subscribed to and persisted locally.
+Jetstream K/V operates as a stream consumer under the hood, meaning an entire configuration namespace can be subscribed to and persisted locally for immediate usage.
 
 ## Usage
 
@@ -43,6 +43,7 @@ interface AppConfig {
   database: {
     host: string,
     port: number,
+    replication?: number,
     credentials: {
       username: string,
       password: string
@@ -102,6 +103,7 @@ const engine = await ConfigEngine.connect<AppConfig>(natsClient, namespace)
 const dbHost = engine.get('database.host');                    // returns a string
 const maxConnections = engine.get('features.maxConnections');  // returns a number
 const blockedUsers = engine.get('blockedUsers');               // returns a string[]
+const dbHost = engine.get('database.replication');             // returns undefined - never set
 
 // COMPILER ERROR - key does not exist on schema
 const trialLength = engine.get('trialLength');  
