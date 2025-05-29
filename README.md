@@ -5,8 +5,8 @@ A strongly-typed configuration management library built on Nats JetStream K/V th
 ## Features
 
 - Strongly-typed configuration schema enforcement (including recursion and array support)
-- Live configuration watching via JetStream K/V watch
-- Configuration value history tracking and retrieval
+- Live configuration watching
+- Configuration value history 
 - Locally-persisted, up-to-date syncing of configuration state
 
 ### Strongly-Typed Configuration Schema Enforcement
