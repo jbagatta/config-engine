@@ -31,6 +31,20 @@ Jetstream K/V supports configurable per-key configuration history.
 
 Jetstream K/V operates as a stream consumer under the hood, meaning an entire configuration namespace can be subscribed to and persisted locally for immediate usage.
 
+## ConfigEngine
+
+The `ConfigEngine` is the primary access point for retrieving and watching configuration values in an existing namespace. Configuration changes are subscribed to via Jetstream, meaning accessing them is done locally and immediately - state is kept up to date automatically, and callbacks can be attached to the state changes. 
+
+`ConfigEngine` requires a Nats client with only read (subscribe) access to the KV streams.
+
+## ConfigEngineManager
+
+The `ConfigEngineManager` is responsible for creating configuration namespaces, and setting/updating values. It also provides access to configuration history (if enabled via `kvOptions`). 
+
+`ConfigEngineManager` requires a Nats client with write (publish) access to the KV streams in order to perform these tasks.
+
+*NOTE: for safety, it's recommended to use separate Nats client auth for `ConfigEngine` and `ConfigEngineManager`* - see `nats-server.conf` in the test setup directory for an example of configuring this in Jetstream.
+
 ## Usage
 
 ```typescript
@@ -122,10 +136,9 @@ await manager.destroy()
 
 ## Running Tests
 
-Spin up a test environment using docker compose:
+Spin up a test environment with a nats server using docker compose:
 ```
-cd test/setup
-docker compose up -d
+docker compose -f test/setup/docker-compose.yml up -d
 ```
 
 and then run the tests as usual:
