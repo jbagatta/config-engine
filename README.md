@@ -73,7 +73,7 @@ const namespace = 'app-config';
 //// ConfigEngineManager
 
 // Create a configuration using the manager
-const manager = ConfigEngineManager.create<AppConfig>(natsClient, {
+const manager = ConfigEngineManager.create<AppConfig>(natsReadWriteClient, {
   namespace: namespace,
   kvOptions: { replicas: 1, history: 2 },
   defaults: {
@@ -95,14 +95,14 @@ const manager = ConfigEngineManager.create<AppConfig>(natsClient, {
 });
 
 // Update configuration (type-enforced)
-await manager.set('features.enableCache', false);  // requires a boolean value
-await manager.set('organization', undefined);      // requires a string | undefined value
+await manager.set('features.enableCache', false);  // required boolean value
+await manager.set('organization', undefined);      // optional string value
 
 // COMPILER ERROR - key does not exist on schema
 await manager.set('trialLength', 7); 
 
 // COMPILER ERROR - incorrect value type
-await manager.set('database.credentials', 101); 
+await manager.set('database.credentials', 101);        // string, not number
 await manager.set('database.credentials', undefined);  // non-optional key 
 
 // Retrieve configuration history, if enabled
@@ -111,7 +111,7 @@ await manager.history('features.enableCache');  // [true, false]
 //// ConfigEngine
 
 // Start the configuration engine
-const engine = await ConfigEngine.connect<AppConfig>(natsClient, namespace)
+const engine = await ConfigEngine.connect<AppConfig>(natsReadonlyClient, namespace)
 
 // Get configuration values (type-enforced)
 const dbHost = engine.get('database.host');                    // returns a string
