@@ -2,6 +2,9 @@
   "name": "@jbagatta/config-engine",
   "version": "0.1.0",
   "description": "A type-enforced dynamic configuration engine library built on Nats Jetstream K/V",
+  "type": "module",
+  "author": "John Bagatta",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -17,14 +20,9 @@
     "test:coverage": "jest --coverage",
     "prepublishOnly": "npm run clean && npm run build"
   },
-  "keywords": [
-    "configuration",
-    "engine",
-    "nats"
-  ],
-  "author": "John Bagatta",
-  "license": "MIT",
-  "type": "commonjs",
+  "dependencies": {
+    "nats": "^2.29.3"
+  },
   "devDependencies": {
     "typescript": "^5.8.3",
     "rimraf": "^5.0.5",
@@ -37,18 +35,12 @@
     "@types/jest": "^29.5.12",
     "@jest/globals": "^29.7.0"
   },
-  "dependencies": {
-    "nats": "^2.29.3"
-  },
   "publishConfig": {
     "access": "public"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jbagatta/config-engine.git"
-  },
-  "bugs": {
-    "url": "https://github.com/jbagatta/config-engine/issues"
-  },
-  "homepage": "https://github.com/jbagatta/config-engine#readme"
+  "keywords": [
+    "configuration",
+    "nats",
+    "jetstream"
+  ]
 }
